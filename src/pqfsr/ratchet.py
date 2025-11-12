@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import hashlib
 import hmac
@@ -90,13 +90,16 @@ class RatchetState:
 class InMemoryKEM:
     """Deterministic KEM stub suitable for reference testing."""
 
+    def __init__(self, rng: Optional[Callable[[int], bytes]] = None) -> None:
+        self._rng = rng or os.urandom
+
     def generate_key_pair(self) -> Tuple[bytes, bytes]:
-        private = os.urandom(32)
+        private = self._rng(32)
         public = hashlib.sha256(b"pqfsr-pk" + private).digest()
         return public, private
 
     def encapsulate(self, public_key: bytes) -> Tuple[bytes, bytes]:
-        eph = os.urandom(32)
+        eph = self._rng(32)
         shared = hashlib.sha256(b"pqfsr-ss" + public_key + eph).digest()
         ciphertext = b"PQFSR" + eph + public_key
         return ciphertext, shared
@@ -110,8 +113,15 @@ class InMemoryKEM:
 
 
 class ForwardRatchet:
-    def __init__(self, kem: Optional[InMemoryKEM] = None, *, max_skip: int = _MAX_SKIP_DEFAULT) -> None:
-        self.kem = kem or InMemoryKEM()
+    def __init__(
+        self,
+        kem: Optional[InMemoryKEM] = None,
+        *,
+        max_skip: int = _MAX_SKIP_DEFAULT,
+        random_bytes: Optional[Callable[[int], bytes]] = None,
+    ) -> None:
+        self._random_bytes = random_bytes or os.urandom
+        self.kem = kem or InMemoryKEM(self._random_bytes)
         self.max_skip = max_skip
 
     def generate_kem_key_pair(self) -> Tuple[bytes, bytes]:
@@ -229,7 +239,7 @@ class ForwardRatchet:
                 raise ValueError("Nonce mismatch")
         else:
             expected_semantic = _compute_semantic_tag(state.combined_digest, message_index)
-            if not hmac.compare_digest(expected_semantic, header["semantic_tag"]):
+            if not hmac.compare_digest(expected_semantic, header["semantic_tag"]):  # constant-time check
                 raise ValueError("Semantic tag mismatch")
 
             shared_secret = self.kem.decapsulate(header["kem_ciphertext"], state.local_ratchet_private)
@@ -247,7 +257,7 @@ class ForwardRatchet:
             message_key, next_chain, derived_nonce = _derive_message_material(state.recv_chain_key, state.recv_count)
             state.recv_chain_key = next_chain
             state.recv_count += 1
-            if not hmac.compare_digest(derived_nonce, packet_nonce):
+            if not hmac.compare_digest(derived_nonce, packet_nonce):  # constant-time check
                 raise ValueError("Nonce mismatch")
             nonce = derived_nonce
 
@@ -255,7 +265,7 @@ class ForwardRatchet:
         plaintext = bytes(a ^ b for a, b in zip(ciphertext, keystream))
 
         expected_tag = hmac.new(message_key, ciphertext + associated_data + nonce, hashlib.sha256).digest()
-        if not hmac.compare_digest(expected_tag, auth_tag):
+        if not hmac.compare_digest(expected_tag, auth_tag):  # constant-time comparison
             raise ValueError("Authentication tag mismatch")
 
         return plaintext
@@ -264,10 +274,19 @@ class ForwardRatchet:
 class RatchetSession:
     """High-level helper mirroring the CSF API but dependency-light."""
 
-    def __init__(self, *, is_initiator: bool, semantic_hint: bytes, max_skip: int = _MAX_SKIP_DEFAULT) -> None:
+    def __init__(
+        self,
+        *,
+        is_initiator: bool,
+        semantic_hint: bytes,
+        max_skip: int = _MAX_SKIP_DEFAULT,
+        random_bytes: Optional[Callable[[int], bytes]] = None,
+        kem: Optional[InMemoryKEM] = None,
+    ) -> None:
         self.is_initiator = is_initiator
         self._semantic_hint = semantic_hint
-        self._ratchet = ForwardRatchet(max_skip=max_skip)
+        self._random_bytes = random_bytes or os.urandom
+        self._ratchet = ForwardRatchet(kem=kem, max_skip=max_skip, random_bytes=self._random_bytes)
         self._state: Optional[RatchetState] = None
         self._ready = False
         self._pending_handshake: Optional[Dict[str, bytes]] = None
@@ -277,12 +296,38 @@ class RatchetSession:
         self._local_digest = hashlib.sha256(b"PQ-FSR-sem" + semantic_hint).digest()
 
     @classmethod
-    def create_initiator(cls, *, semantic_hint: bytes, max_skip: int = _MAX_SKIP_DEFAULT) -> "RatchetSession":
-        return cls(is_initiator=True, semantic_hint=semantic_hint, max_skip=max_skip)
+    def create_initiator(
+        cls,
+        *,
+        semantic_hint: bytes,
+        max_skip: int = _MAX_SKIP_DEFAULT,
+        random_bytes: Optional[Callable[[int], bytes]] = None,
+        kem: Optional[InMemoryKEM] = None,
+    ) -> "RatchetSession":
+        return cls(
+            is_initiator=True,
+            semantic_hint=semantic_hint,
+            max_skip=max_skip,
+            random_bytes=random_bytes,
+            kem=kem,
+        )
 
     @classmethod
-    def create_responder(cls, *, semantic_hint: bytes, max_skip: int = _MAX_SKIP_DEFAULT) -> "RatchetSession":
-        return cls(is_initiator=False, semantic_hint=semantic_hint, max_skip=max_skip)
+    def create_responder(
+        cls,
+        *,
+        semantic_hint: bytes,
+        max_skip: int = _MAX_SKIP_DEFAULT,
+        random_bytes: Optional[Callable[[int], bytes]] = None,
+        kem: Optional[InMemoryKEM] = None,
+    ) -> "RatchetSession":
+        return cls(
+            is_initiator=False,
+            semantic_hint=semantic_hint,
+            max_skip=max_skip,
+            random_bytes=random_bytes,
+            kem=kem,
+        )
 
     def _combine_digest(self, remote_digest: bytes) -> bytes:
         ordered = sorted([self._local_digest, remote_digest])
@@ -299,7 +344,7 @@ class RatchetSession:
 
         kem_public, kem_private = self._ratchet.generate_kem_key_pair()
         ratchet_public, ratchet_private = self._ratchet.generate_kem_key_pair()
-        handshake_id = os.urandom(16)
+        handshake_id = self._random_bytes(16)
 
         self._pending_handshake = {
             "kem_private": kem_private,
@@ -426,12 +471,20 @@ class RatchetSession:
         return json.dumps(payload).encode("utf-8")
 
     @classmethod
-    def from_serialized(cls, blob: bytes) -> "RatchetSession":
+    def from_serialized(
+        cls,
+        blob: bytes,
+        *,
+        random_bytes: Optional[Callable[[int], bytes]] = None,
+        kem: Optional[InMemoryKEM] = None,
+    ) -> "RatchetSession":
         payload = json.loads(blob.decode("utf-8"))
         session = cls(
             is_initiator=payload["is_initiator"],
             semantic_hint=bytes.fromhex(payload["semantic_hint"]),
             max_skip=payload["max_skip"],
+            random_bytes=random_bytes,
+            kem=kem,
         )
         state = RatchetState(
             root_key=bytes.fromhex(payload["root_key"]),

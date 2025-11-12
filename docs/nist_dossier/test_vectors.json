@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "seed": "6e6973742d646f73736965722d766563746f72",
+    "kem": "InMemoryKEM (sha256-based)",
+    "hash": "SHA-256",
+    "hkdf": "RFC5869 / SHA-256"
+  },
+  "handshake_request": {
+    "version": "00000001",
+    "handshake_id": "c3be27e1dde0164439c9edd43f13235d",
+    "kem_public": "43118dde12b6a36da23f2800c6cb291b70b41d4b1801307787ca3fd6ba226c50",
+    "ratchet_public": "536b2d9f49d4e79e446ce63741d1bbad4a5374fecb73947ac0c49c9c58b5fee8",
+    "semantic_digest": "bfabbac2afb7267de1cb0306eef0e09f1fad699ccb2127d136e701d32b9413de"
+  },
+  "handshake_response": {
+    "version": "00000001",
+    "handshake_id": "c3be27e1dde0164439c9edd43f13235d",
+    "kem_ciphertext": "505146535297a761fc7b432892a1750c37c73fdfaec5bce52acbbaf5fc762eb5309fa3195a43118dde12b6a36da23f2800c6cb291b70b41d4b1801307787ca3fd6ba226c50",
+    "ratchet_public": "455afe50e19d2c695840140dc281df05479ff16c6618dcfc8308c13fe72dc5ee",
+    "semantic_digest": "4ba9a4c215b8a2291c8ffef50e39a1af2e61224f1373371df06ab8257a9a1c9f"
+  },
+  "message": {
+    "input": "hello pqc",
+    "packet": {
+      "header": {
+        "version": 1,
+        "count": 0,
+        "kem_ciphertext": "505146535258f7ce5f54ae28d2d049b887bf17df904d51c8c696bb7f4c35f9266f3964470b455afe50e19d2c695840140dc281df05479ff16c6618dcfc8308c13fe72dc5ee",
+        "ratchet_pub": "79f7429bdb8d16d5c323c6b176eba071eeceea6872f523d3124f6a59f540e6cd",
+        "semantic_tag": "f1c8fac36b9fed7c16f0d78efbc8274a"
+      },
+      "ciphertext": "03b26058d469e9e21a",
+      "auth_tag": "a14eb582c438b0411657bcd35b7232a36f1709a88c679af3ff55826e62f71268",
+      "nonce": "6a8a2fb4388a08d34b697b8fa13191ea"
+    },
+    "decrypted": "hello pqc"
+  }
+}
