@@ -109,9 +109,9 @@ See [`examples/examples.ipynb`](examples/examples.ipynb) for a comprehensive not
 python3 -m unittest discover tests
 ```
 
-**Status**: ✅ **125 tests passing, 1 skipped** (hypothesis optional)
+**Status**: ✅ **128 tests passing, 1 skipped** (hypothesis optional)
 
-The comprehensive test suite includes error handling, security properties, edge cases, handshake variations, serialization, CBOR, signatures, and integration scenarios.
+The comprehensive test suite includes error handling, security properties, edge cases, handshake variations, serialization, CBOR, signatures, test vectors, and integration scenarios.
 
 ### Rust Tests
 
@@ -120,15 +120,15 @@ cd pqfsr_core
 cargo test --no-default-features
 ```
 
-**Status**: ✅ **56 tests passing**
+**Status**: ✅ **60 tests passing**
 
 - `crypto_test.rs`: 5 tests (HKDF, ChaCha20-Poly1305)
 - `serialization_test.rs`: 10 tests (JSON, CBOR, wire format)
-- `session_test.rs`: 5 tests (handshake, version negotiation)
+- `session_test.rs`: 7 tests (handshake, version negotiation, replay protection)
 - `signatures_test.rs`: 4 tests (Dilithium)
 - `ratchet_test.rs`: 9 tests (bootstrap, encrypt, decrypt)
 - `strategy_test.rs`: 14 tests (OrganicStrategy, RatchetMode)
-- `integration_test.rs`: 11 tests (end-to-end scenarios)
+- `integration_test.rs`: 15 tests (end-to-end scenarios, state persistence, forward secrecy)
 
 ## Implementation Status
 
@@ -150,10 +150,30 @@ cargo test --no-default-features
 - Traffic analysis mitigation (padding)
 - Group messaging support
 
+## Performance
+
+See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for comprehensive performance metrics.
+
+**Quick Summary**:
+- Handshake: 119.72 handshakes/sec (8.35ms mean)
+- Encryption: Up to 1.95 MB/s for large messages
+- Signatures: Key gen 126μs, Sign 284μs, Verify 126μs
+- Serialization: CBOR 0.7% smaller and faster than JSON
+
+Run benchmarks:
+```bash
+# Python benchmarks
+python3 tools/benchmark.py
+
+# Rust benchmarks
+cd pqfsr_core && cargo bench --no-default-features
+```
+
 ## Spec & Documentation
 
 - Full protocol details: [`docs/spec/forward_secret_ratchet.md`](docs/spec/forward_secret_ratchet.md)
 - Rust implementation: [`docs/README_RUST.md`](docs/README_RUST.md)
+- Performance benchmarks: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
 
 ## Threat Matrix
 
