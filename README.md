@@ -1,16 +1,19 @@
 # pq-fsr
 
-Reference implementation of the **Post-Quantum Forward-Secret Ratchet (PQ-FSR)** protocol. The goal of this repository is to provide a compact, dependency-light codebase that researchers can audit, benchmark, and extend without pulling the full CSF-Crypto stack.
+Reference implementation of the **Post-Quantum Forward-Secret Ratchet (PQ-FSR)** protocol. The goal of this repository is to provide a compact, dependency-light codebase that researchers can audit, benchmark, and extend.
 
 > **Status**: Proof-of-concept. Cryptanalysis and production reviews are strongly encouraged before any deployment.
 
 ## Features
 
-- Native forward secrecy and post-compromise security in a single primitive
-- Kyber-style KEM abstraction with a pure-Python fallback for testing
-- HKDF-like key schedule (SHA-256 based) to ease analysis and reproducibility
-- Deterministic test harness with out-of-order delivery and state snapshot checks
-- Zero external dependencies at runtime (only the standard library)
+- **"Chronos-Entropy" Architecture**: An adaptive, organic ratchet strategy that dynamically switches between high-security Quantum Pulses (KEM) and high-performance Fluid Flow (Hash Ratchet) based on network conditions and entropy decay.
+- **Native forward secrecy and post-compromise security** in a single primitive.
+- **High-Performance Rust Core**: All cryptographic operations are implemented in Rust (`pqfsr_core`) for maximum performance and security.
+- **Python Bindings**: Complete PyO3 bindings provide a Python-friendly API while leveraging the Rust implementation.
+- **Kyber768 KEM**: Post-quantum key encapsulation using Kyber768.
+- **Dilithium Signatures**: Post-quantum digital signatures for handshake authentication.
+- **CBOR Serialization**: Compact binary serialization format (default), with JSON for backward compatibility.
+- **Speculative Key Generation**: Supports pre-computation of ephemeral keys to minimize latency.
 
 ## Repository Layout
 
@@ -19,23 +22,64 @@ pq-fsr/
 ├── README.md                 # This document
 ├── pyproject.toml            # Build / packaging metadata
 ├── docs/
+│   ├── README_RUST.md        # Rust implementation documentation
 │   └── spec/
 │       └── forward_secret_ratchet.md   # Full protocol specification (NIST-style)
-├── src/
-│   └── pqfsr/
+├── pqfsr_core/               # Rust core implementation (REQUIRED)
+│   ├── src/                  # Rust source code
+│   │   ├── lib.rs            # PyO3 bindings
+│   │   ├── crypto.rs         # Cryptographic primitives
+│   │   ├── state.rs          # Data structures
+│   │   ├── strategy.rs       # Adaptive strategy
+│   │   ├── ratchet.rs        # Protocol core
+│   │   ├── session.rs        # Session API
+│   │   ├── serialization.rs  # Serialization (CBOR/JSON)
+│   │   ├── signatures.rs     # Dilithium signatures
+│   │   └── error.rs           # Standardized error handling
+│   ├── tests/                # Rust test suite (56 tests passing)
+│   └── python/pqfsr/         # Python wrapper
 │       ├── __init__.py       # Public API
-│       └── ratchet.py        # Reference ratchet implementation
-└── tests/
-    └── test_ratchet.py       # Unit tests covering handshake & recovery
+│       └── rust_wrapper.py   # Python compatibility layer
+├── tests/                    # Python test suite (125 tests passing)
+├── examples/
+│   └── examples.ipynb        # Comprehensive usage examples
+└── tools/
+    └── benchmark.py          # Performance benchmarking
 ```
 
 ## Installation
 
+### Prerequisites
+
+- Rust toolchain (for building the core)
+- Python 3.8+
+- `maturin` (for building Python bindings): `pip install maturin`
+
+### Build and Install
+
 ```bash
+# Create virtual environment
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install Rust core
+cd pqfsr_core
+maturin develop
+cd ..
+
+# Install Python package
 pip install -e .[dev]
 ```
+
+The Rust core (`pqfsr_core`) is **required** - there is no Python fallback. All cryptographic operations are performed in Rust for maximum performance and security.
+
+## Architecture: Chronos-Entropy
+
+The heart of PQ-FSR is the **Organic Strategy** engine. Unlike traditional protocols that follow rigid rules (e.g., "ratchet every message"), PQ-FSR adapts:
+
+1.  **Quantum Pulse (KEM Ratchet)**: Triggered when entropy decays (time/message count) or opportunistically on large packets. Provides Post-Compromise Security (PCS).
+2.  **Fluid Flow (Hash Ratchet)**: Used during high-velocity bursts or stable network conditions to maximize throughput. Provides Forward Secrecy (FS).
+3.  **Burst Protection**: The protocol intelligently downgrades to Hash Ratchet during unidirectional bursts to prevent "Root Key Loss" in case of packet drops, ensuring robust message skipping support.
 
 ## Quick Start
 
@@ -55,53 +99,72 @@ plaintext = bob.decrypt(packet)
 assert plaintext == b"hello quantum"
 ```
 
-See [`examples/examples.ipynb`](#) *(to be added)* for a notebook walkthrough including failure recovery and serialization.
+See [`examples/examples.ipynb`](examples/examples.ipynb) for a comprehensive notebook walkthrough including failure recovery, serialization, post-compromise security, and custom KEM usage.
 
 ## Testing
 
+### Python Tests
+
 ```bash
-pytest -q
+python3 -m unittest discover tests
 ```
 
-The test suite uses a deterministic stub KEM to avoid third-party dependencies while still exercising the ratchet logic, skipped messages, and post-compromise recovery.
+**Status**: ✅ **125 tests passing, 1 skipped** (hypothesis optional)
 
-## Spec & Roadmap
+The comprehensive test suite includes error handling, security properties, edge cases, handshake variations, serialization, CBOR, signatures, and integration scenarios.
+
+### Rust Tests
+
+```bash
+cd pqfsr_core
+cargo test --no-default-features
+```
+
+**Status**: ✅ **56 tests passing**
+
+- `crypto_test.rs`: 5 tests (HKDF, ChaCha20-Poly1305)
+- `serialization_test.rs`: 10 tests (JSON, CBOR, wire format)
+- `session_test.rs`: 5 tests (handshake, version negotiation)
+- `signatures_test.rs`: 4 tests (Dilithium)
+- `ratchet_test.rs`: 9 tests (bootstrap, encrypt, decrypt)
+- `strategy_test.rs`: 14 tests (OrganicStrategy, RatchetMode)
+- `integration_test.rs`: 11 tests (end-to-end scenarios)
+
+## Implementation Status
+
+### ✅ Completed Features
+
+- ✅ Complete Rust implementation with PyO3 bindings
+- ✅ Kyber768 KEM integration
+- ✅ Dilithium signature support
+- ✅ CBOR serialization (default, with JSON fallback)
+- ✅ Handshake replay protection (TTL cache, timestamp validation)
+- ✅ Version negotiation
+- ✅ Standardized error handling (PQFSRError)
+- ✅ Comprehensive test coverage (56 Rust tests, 125 Python tests)
+
+### 📋 Roadmap
+
+- Performance benchmarks
+- Formal verification (ProVerif/Tamarin models)
+- Traffic analysis mitigation (padding)
+- Group messaging support
+
+## Spec & Documentation
 
 - Full protocol details: [`docs/spec/forward_secret_ratchet.md`](docs/spec/forward_secret_ratchet.md)
-- Planned milestones: integration of real Kyber bindings, benchmarking harness, and formal verification artifacts.
-- NIST-style dossier materials: [`docs/nist_dossier/`](docs/nist_dossier/executive_summary.md)
-
-## Relationship to CSF-Crypto
-
-PQ-FSR was extracted from the CSF-Crypto project to give the research community a focused artifact. The CSF implementation now depends on this reference design for its forward-secret messaging layer; upstream changes will be synchronized here before release.
+- Rust implementation: [`docs/README_RUST.md`](docs/README_RUST.md)
 
 ## Threat Matrix
 
 | Threat | Impact | Mitigation |
 |--------|--------|------------|
-| State compromise | Attacker decrypts future messages | PCS: next honest inbound packet rotates KEM-derived root keys |
+| State compromise | Attacker decrypts future messages | PCS: Adaptive "Quantum Pulse" rotates KEM-derived root keys |
 | Ciphertext replay | Duplicate delivery could re-trigger decrypt | Counters + semantic tags (16-byte digest) detect replays |
 | Packet tampering | Forged ciphertexts may desync state | HMAC tag verification (constant-time) rejects tampered packets |
 | Side-channel leakage | Timing may leak key comparison results | Use of `hmac.compare_digest`; constant-time annotations mark critical checks |
 | Storage theft | Serialized state reveals secrets | Specification mandates encrypting `export_state()` output at rest |
 
-## Roadmap
-
-- ✅ Publish reference implementation (`src/pqfsr/ratchet.py`) with deterministic tests (`tests/test_vectors.py`).
-- ✅ Provide Hypothesis-based regression checks (`tests/test_property.py`).
-- ✅ Deliver benchmarking harness (`tools/benchmark.py`).
-- 🔄 Formal security proof (Game-based / UC) – in progress.
-- 🔄 Native bindings (Rust/C) sharing test vectors – planned.
-- 🔄 Public cryptanalysis review: contact list and issue templates – planned.
-
-## Contributing & Feedback
-
-1. Fork the repository and enable the optional dev dependencies: `pip install -e .[dev]`.
-2. Run the full test suite (`pytest -q`) and, where relevant, execute `tools/benchmark.py` before submitting patches.
-3. Open GitHub issues using the planned templates (spec, security, implementation, benchmark) and provide reproducible vectors.
-4. Security-sensitive disclosures: email security@csf.example with encrypted details (PGP key to be published).
-5. Join upcoming PQC forums (announced in issues) for synchronous discussions and review sessions.
-
 ## License
 
-Copyright © 2025 CSF-Crypto. All rights reserved. Usage requires prior written permission.
+Copyright © 2025 Jeremy Noverraz 1988-2025. All rights reserved. Usage requires prior written permission.

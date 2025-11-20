@@ -1,0 +1,73 @@
+[package]
+name = "pqfsr-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "pqfsr_core"
+# Compile as both cdylib (for Python) and rlib (for Rust tests)
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["python"]
+python = []
+
+[dependencies]
+# Python bindings (optional, enabled by default)
+pyo3 = { version = "0.19", features = ["extension-module"], optional = true }
+
+# Post-quantum cryptography
+pqcrypto-kyber = "0.8"
+pqcrypto-traits = "0.3"
+pqcrypto-dilithium = "0.5"  # Signatures (Dilithium)
+
+# Cryptography primitives
+sha2 = "0.10"
+hmac = "0.12"
+hkdf = "0.12"  # HKDF implementation
+chacha20poly1305 = "0.10"
+aes-gcm = "0.10"
+rand = "0.8"
+
+# Parallelism for speculative keygen
+rayon = "1.7"
+
+# Constant-time operations
+subtle = "2.5"
+
+# Memory zeroization
+zeroize = { version = "1.6", features = ["zeroize_derive"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ciborium = "0.2"  # CBOR support
+hex = "0.4"  # Hex encoding/decoding
+
+# Error handling
+thiserror = "1.0"
+
+# Collections
+indexmap = "1.9"  # For ordered maps (skipped keys)
+
+# Lazy static for global cache
+lazy_static = "1.4"  # For global shared replay cache
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "handshake_bench"
+harness = false
+
+[[bench]]
+name = "encryption_bench"
+harness = false
+
+[[bench]]
+name = "signature_bench"
+harness = false
+
+[[bench]]
+name = "serialization_bench"
+harness = false

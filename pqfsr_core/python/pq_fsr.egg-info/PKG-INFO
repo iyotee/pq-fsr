@@ -1,0 +1,116 @@
+Metadata-Version: 2.4
+Name: pq-fsr
+Version: 0.2.0
+Summary: Reference implementation of a post-quantum forward-secret ratchet (PQ-FSR).
+Author: CSF Crypto Team
+License: Proprietary
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: hypothesis>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Provides-Extra: crypto
+Requires-Dist: cryptography>=41.0.0; extra == "crypto"
+
+# pq-fsr
+
+Reference implementation of the **Post-Quantum Forward-Secret Ratchet (PQ-FSR)** protocol. The goal of this repository is to provide a compact, dependency-light codebase that researchers can audit, benchmark, and extend.
+
+> **Status**: Proof-of-concept. Cryptanalysis and production reviews are strongly encouraged before any deployment.
+
+## Features
+
+- **"Chronos-Entropy" Architecture**: An adaptive, organic ratchet strategy that dynamically switches between high-security Quantum Pulses (KEM) and high-performance Fluid Flow (Hash Ratchet) based on network conditions and entropy decay.
+- **Native forward secrecy and post-compromise security** in a single primitive.
+- **Kyber-style KEM abstraction** with a pure-Python fallback for testing, and hooks for a high-performance Rust core (`pqfsr_core`).
+- **Speculative Key Generation**: Supports pre-computation of ephemeral keys to minimize latency.
+- **Zero external dependencies** at runtime (only the standard library) for the core Python implementation.
+
+## Repository Layout
+
+```
+pq-fsr/
+├── README.md                 # This document
+├── pyproject.toml            # Build / packaging metadata
+├── docs/
+│   └── spec/
+│       └── forward_secret_ratchet.md   # Full protocol specification (NIST-style)
+├── src/
+│   └── pqfsr/
+│       ├── __init__.py       # Public API
+│       ├── protocol.py       # Core RatchetSession & ForwardRatchet logic
+│       ├── strategy.py       # "Chronos" Adaptive Strategy logic
+│       ├── state.py          # Data structures
+│       ├── crypto.py         # Cryptographic primitives & Rust bridge
+│       └── serialization.py  # State serialization & Wire format
+├── pqfsr_core/               # Optional Rust extension for high-performance crypto
+├── tests/                    # Comprehensive test suite
+├── examples/
+│   └── examples.ipynb        # Comprehensive usage examples
+└── tools/
+    └── benchmark.py          # Performance benchmarking
+```
+
+## Installation
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+```
+
+## Architecture: Chronos-Entropy
+
+The heart of PQ-FSR v2 is the **Organic Strategy** engine. Unlike traditional protocols that follow rigid rules (e.g., "ratchet every message"), PQ-FSR adapts:
+
+1.  **Quantum Pulse (KEM Ratchet)**: Triggered when entropy decays (time/message count) or opportunistically on large packets. Provides Post-Compromise Security (PCS).
+2.  **Fluid Flow (Hash Ratchet)**: Used during high-velocity bursts or stable network conditions to maximize throughput. Provides Forward Secrecy (FS).
+3.  **Burst Protection**: The protocol intelligently downgrades to Hash Ratchet during unidirectional bursts to prevent "Root Key Loss" in case of packet drops, ensuring robust message skipping support.
+
+## Quick Start
+
+```python
+from pqfsr import RatchetSession
+
+# Pretend we already have long-term keys / fingerprints
+alice = RatchetSession.create_initiator(semantic_hint=b"alice", max_skip=32)
+bob = RatchetSession.create_responder(semantic_hint=b"bob", max_skip=32)
+
+request = alice.create_handshake_request()
+response = bob.accept_handshake(request)
+alice.finalize_handshake(response)
+
+packet = alice.encrypt(b"hello quantum")
+plaintext = bob.decrypt(packet)
+assert plaintext == b"hello quantum"
+```
+
+See [`examples/examples.ipynb`](examples/examples.ipynb) for a comprehensive notebook walkthrough including failure recovery, serialization, post-compromise security, and custom KEM usage.
+
+## Testing
+
+```bash
+python3 -m unittest discover tests
+```
+
+The comprehensive test suite includes error handling, security properties, edge cases, handshake variations, serialization, and integration scenarios.
+
+## Spec & Roadmap
+
+- Full protocol details: [`docs/spec/forward_secret_ratchet.md`](docs/spec/forward_secret_ratchet.md)
+- Planned milestones: integration of real Kyber bindings, benchmarking harness, and formal verification artifacts.
+
+## Threat Matrix
+
+| Threat | Impact | Mitigation |
+|--------|--------|------------|
+| State compromise | Attacker decrypts future messages | PCS: Adaptive "Quantum Pulse" rotates KEM-derived root keys |
+| Ciphertext replay | Duplicate delivery could re-trigger decrypt | Counters + semantic tags (16-byte digest) detect replays |
+| Packet tampering | Forged ciphertexts may desync state | HMAC tag verification (constant-time) rejects tampered packets |
+| Side-channel leakage | Timing may leak key comparison results | Use of `hmac.compare_digest`; constant-time annotations mark critical checks |
+| Storage theft | Serialized state reveals secrets | Specification mandates encrypting `export_state()` output at rest |
+
+## License
+
+Copyright © 2025 CSF-Crypto. All rights reserved. Usage requires prior written permission.

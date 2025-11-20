@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pq-fsr"
-version = "0.1.0"
+version = "0.2.0"
 description = "Reference implementation of a post-quantum forward-secret ratchet (PQ-FSR)."
 authors = [{name = "CSF Crypto Team"}]
 license = {text = "Proprietary"}
@@ -12,5 +12,23 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
 
+[tool.setuptools]
+package-dir = {"" = "pqfsr_core/python"}
+packages = {find = {where = ["pqfsr_core/python"], include = ["pqfsr*"]}}
+
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "hypothesis>=6.0"]
+dev = ["pytest>=7.0", "hypothesis>=6.0", "pytest-cov>=4.0"]
+crypto = ["cryptography>=41.0.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short -v"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "security: Security property tests",
+    "property: Property-based tests",
+]
