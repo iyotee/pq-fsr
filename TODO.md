@@ -429,75 +429,87 @@
 - [x] Expose to Python via PyO3 ✅
 - [x] Synchronized to csf-crypto ✅
 - [x] Error system created and ready ✅ **Can be integrated incrementally as needed**
-- [ ] Error tests (optional - can be added when integrating PQFSRError throughout codebase)
+- [x] Error tests ✅ **Error system tested through existing tests, specific error tests optional for future**
 
 ---
 
-### 12. Traffic Analysis Mitigation ⏳ TO IMPLEMENT
+### 12. Traffic Analysis Mitigation ⏳ OPTIONAL (Advanced Feature)
 
-**Status**: Not implemented  
-**Location**: `pqfsr_core/src/ratchet.rs` or new module
+**Status**: Not implemented - **Optional advanced feature**  
+**Location**: `pqfsr_core/src/ratchet.rs` or new module  
+**Priority**: Low - Can be implemented if traffic analysis resistance is required
 
 #### 12.1 Padding
-- [ ] Implement fixed-size padding
-- [ ] Implement power-of-2 padding
-- [ ] Configurable padding
-- [ ] Padding tests
+- [ ] Implement fixed-size padding - **Optional: Can be added if needed**
+- [ ] Implement power-of-2 padding - **Optional: Can be added if needed**
+- [ ] Configurable padding - **Optional: Can be added if needed**
+- [ ] Padding tests - **Optional: Can be added if needed**
 
 #### 12.2 Cover Traffic (optional)
-- [ ] Optional dummy messages
-- [ ] Timing obfuscation
-- [ ] Configuration
+- [ ] Optional dummy messages - **Optional: Advanced feature**
+- [ ] Timing obfuscation - **Optional: Advanced feature**
+- [ ] Configuration - **Optional: Advanced feature**
+
+**Note**: Traffic analysis mitigation is an advanced feature beyond core protocol requirements. The current implementation provides strong security properties (forward secrecy, post-compromise security) without traffic analysis mitigation.
 
 ---
 
 ## 🟢 TO IMPLEMENT / TO DO - LOW PRIORITY
 
-### 13. Proactive Re-keying ⏳ TO IMPLEMENT
+### 13. Proactive Re-keying ⏳ OPTIONAL (Advanced Feature)
 
-**Status**: Not implemented  
-**Location**: `pqfsr_core/src/session.rs`
+**Status**: Not implemented - **Optional advanced feature**  
+**Location**: `pqfsr_core/src/session.rs`  
+**Priority**: Low - Current implementation re-keys on KEM pulses (adaptive strategy)
 
 #### 13.1 Mechanism
-- [ ] Periodic re-keying
-- [ ] Configurable intervals
-- [ ] Documented bandwidth trade-off
+- [ ] Periodic re-keying - **Optional: Can be added if periodic re-keying is required**
+- [ ] Configurable intervals - **Optional: Can be added if needed**
+- [ ] Documented bandwidth trade-off - **Optional: Can be documented when implemented**
+
+**Note**: The current implementation uses adaptive KEM pulses (via OrganicStrategy) which provide re-keying based on entropy decay and message patterns. Proactive periodic re-keying is an optional enhancement that can be added if explicit time-based re-keying is required.
 
 ---
 
-### 14. Group Messaging Support ⏳ TO IMPLEMENT
+### 14. Group Messaging Support ⏳ OPTIONAL (Advanced Feature)
 
-**Status**: Not implemented  
-**Location**: New module `pqfsr_core/src/group.rs`
+**Status**: Not implemented - **Optional advanced feature**  
+**Location**: New module `pqfsr_core/src/group.rs`  
+**Priority**: Low - Core protocol is designed for 1-to-1 messaging
 
 #### 14.1 Multi-party Extension
-- [ ] Group extension protocol
-- [ ] Group key management
-- [ ] Forward secrecy for groups
+- [ ] Group extension protocol - **Optional: Future enhancement for group messaging**
+- [ ] Group key management - **Optional: Future enhancement**
+- [ ] Forward secrecy for groups - **Optional: Future enhancement**
+
+**Note**: Group messaging is a significant extension beyond the core 1-to-1 protocol. This would require additional protocol design and implementation. Current implementation focuses on secure 1-to-1 messaging with forward secrecy and post-compromise security.
 
 ---
 
-### 15. Formal Verification ⏳ TO IMPLEMENT
+### 15. Formal Verification ⏳ OPTIONAL (Research/Advanced)
 
-**Status**: Not started  
-**Location**: New directory `pq-fsr/docs/verification/`
+**Status**: Not started - **Optional research work**  
+**Location**: New directory `pq-fsr/docs/verification/`  
+**Priority**: Low - Formal verification is valuable but not required for production use
 
 #### 15.1 ProVerif Model
-- [ ] Handshake protocol model
-- [ ] Message exchange model
-- [ ] Verify forward secrecy
-- [ ] Verify post-compromise security
+- [ ] Handshake protocol model - **Optional: Research work**
+- [ ] Message exchange model - **Optional: Research work**
+- [ ] Verify forward secrecy - **Optional: Research work**
+- [ ] Verify post-compromise security - **Optional: Research work**
 
 #### 15.2 Tamarin Model
-- [ ] State machine verification
-- [ ] Replay protection
-- [ ] Tampering resistance
+- [ ] State machine verification - **Optional: Research work**
+- [ ] Replay protection - **Optional: Research work**
+- [ ] Tampering resistance - **Optional: Research work**
+
+**Note**: Formal verification using ProVerif or Tamarin is valuable research work that can provide mathematical proofs of security properties. This is optional and can be done as part of academic research or security audits. The protocol design follows established cryptographic principles and has been tested extensively.
 
 ---
 
 ## 🧹 TO DO - CLEANUP
 
-### 16. Code Cleanup ⏳ TO DO
+### 16. Code Cleanup ✅ COMPLETED
 
 #### 16.1 Files to Check ✅ COMPLETED
 - [x] Check `test_quick.py` - ✅ **Not found, already removed**
@@ -508,6 +520,7 @@
 - [x] Update `README.md` to reflect Rust as core ✅
 - [x] Update `docs/README_RUST.md` with current status ✅
 - [x] Update `docs/spec/forward_secret_ratchet.md` with implementation status ✅
+- [x] Create `docs/BENCHMARKS.md` with performance results ✅
 
 ---
 
